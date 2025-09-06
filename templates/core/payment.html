@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<div style="max-width:500px;margin:40px auto;background:#fff;padding:32px 24px;border-radius:16px;box-shadow:0 2px 16px rgba(44,34,94,0.10);">
+    <h2 style="margin-bottom:18px;">Pay for Your Ride</h2>
+    <p><strong>Booking ID:</strong> {{ booking.id }}</p>
+    <p><strong>Vehicle:</strong> {{ booking.vehicle_type }}</p>
+    <p><strong>Fare:</strong> ₹{{ booking.price }}</p>
+    <form id="razorpay-form">
+        <script src="https://checkout.razorpay.com/v1/checkout.js"
+                data-key="{{ razorpay_key_id }}"
+                data-amount="{{ amount }}"
+                data-currency="INR"
+                data-order_id="{{ order_id }}"
+                data-buttontext="Pay Now"
+                data-name="RideOn"
+                data-description="Ride Payment"
+                data-image="https://img.icons8.com/ios-filled/50/0984e3/car--v1.png"
+                data-prefill.name="{{ request.user.username }}"
+                data-theme.color="#6c3fcf">
+        </script>
+        <input type="hidden" name="booking_id" value="{{ booking.id }}" />
+    </form>
+</div>
+<script>
+// After payment, call backend to mark booking as paid
+function paymentSuccessHandler(response) {
+    fetch("{% url 'payment_success' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': '{{ csrf_token }}'},
+        body: new URLSearchParams({booking_id: '{{ booking.id }}'})
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            window.location.href = '/booking_success/';
+        }
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Book Vehicle</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f5f6fa;">
+    <div class="container" style="max-width:500px;width:100%;background:#fff;border-radius:16px;box-shadow:0 2px 16px rgba(44,34,94,0.10);padding:32px 24px;">
+        <h2 style="color:#0984e3;text-align:center;margin-bottom:24px;font-size:2em;font-weight:800;">Booking Details</h2>
+        <div style="margin-bottom:24px;font-size:1.1em;line-height:1.7;">
+            <strong>Vehicle:</strong> {{ vehicle_type }}<br>
+            <strong>Fare:</strong> ₹{{ price }}<br>
+            <strong>Pickup:</strong> {{ pickup }}<br>
+            <strong>Destination:</strong> {{ destination }}<br>
+        </div>
+        <div class="wallet" style="margin-bottom:24px;background:#ede7fa;padding:12px 18px;border-radius:8px;font-weight:600;color:#6c3fcf;">
+            Wallet Balance: ₹{{ wallet.balance|default:'0.00' }}
+        </div>
+        <form method="post" style="display:flex;flex-direction:column;gap:16px;">
+            {% csrf_token %}
+            <input type="hidden" name="vehicle_type" value="{{ vehicle_type }}">
+            <input type="hidden" name="price" value="{{ price }}">
+            <input type="hidden" name="pickup" value="{{ pickup }}">
+            <input type="hidden" name="destination" value="{{ destination }}">
+            <label style="font-weight:600;">Select Payment Method:</label>
+            <select name="payment_method" required style="padding:10px 12px;border-radius:6px;border:1px solid #dfe6e9;font-size:1em;margin-bottom:8px;">
+                <option value="wallet">Wallet (₹{{ wallet.balance|default:'0.00' }})</option>
+                <option value="card">Credit/Debit Card</option>
+                <option value="upi">UPI</option>
+                <option value="cash">Cash</option>
+            </select>
+            <button type="submit" style="background:#0984e3;color:#fff;font-weight:700;font-size:1.1em;padding:12px 0;border:none;border-radius:6px;box-shadow:0 2px 8px rgba(9,132,227,0.08);cursor:pointer;transition:background 0.2s;">Confirm Booking</button>
+        </form>
+        <div style="text-align:center;margin-top:24px;">
+            <a href="/" style="color:#0984e3;font-weight:600;">Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

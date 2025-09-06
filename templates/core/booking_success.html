@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Booking Confirmed</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body style="background: #f6f3ff; min-height: 100vh; margin: 0; font-family: 'Segoe UI', Arial, sans-serif;">
+    <div class="container" style="max-width: 420px; margin: 60px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(44,34,94,0.08); padding: 40px 32px; text-align: center;">
+        <h2 style="color: #2d1e5f; font-size: 2rem; font-weight: 700; margin-bottom: 24px;">Booking Confirmed!</h2>
+        <div style="margin-bottom: 32px; text-align: left; background: #ede7fa; border-radius: 10px; padding: 18px 20px; font-size: 1.08rem; color: #2d1e5f; box-shadow: 0 2px 8px rgba(44,34,94,0.04);">
+            <div style="margin-bottom: 10px;"><strong>Vehicle:</strong> {{ vehicle_type }}</div>
+            <div style="margin-bottom: 10px;"><strong>Fare:</strong> ₹{{ price }}</div>
+            <div style="margin-bottom: 10px;"><strong>Pickup:</strong> {{ pickup }}</div>
+            <div style="margin-bottom: 10px;"><strong>Destination:</strong> {{ destination }}</div>
+            <div><strong>Payment Method:</strong> {{ payment_method|title }}</div>
+        </div>
+        <a href="/" style="display: inline-block; background: #6c3fcf; color: #fff; text-decoration: none; font-size: 1.1rem; font-weight: 500; padding: 12px 32px; border-radius: 8px; transition: background 0.2s; box-shadow: 0 2px 8px rgba(44,34,94,0.07);">Back to Home</a>
+    </div>
+</body>
+</html>

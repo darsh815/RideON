@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Home - RideOn</title>
+    <style>
+        .map-container {
+            padding: auto;
+            height: 500px;
+            min-height: 700px;
+        }
+    </style>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <!-- Demo Notification Bar -->
+    <div style="width:100%;background:#ffe082;color:#6c3fcf;padding:12px 0;text-align:center;font-weight:600;font-size:1.08em;box-shadow:0 2px 8px rgba(44,34,94,0.07);">
+        <span>🔔 You have 1 new notification: Your booking is confirmed!</span>
+    </div>
+    <div class="container" style="width:100vw;min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;background:linear-gradient(120deg,#ede7fa 0%,#f6f3ff 100%);padding:0 8px;box-sizing:border-box;">
+        <h1 style="margin-bottom:8px;">RideOn</h1>
+        {% if user.is_authenticated %}
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:18px;">
+                <span style="font-weight:500;">Hello, {{ user.username }}!</span>
+                <a href="{% url 'logout' %}" style="color:#0984e3;font-weight:600;margin-left:32px;">Logout</a>
+            </div>
+            <style>
+                .hamburger {
+                    display: inline-block;
+                    cursor: pointer;
+                    padding: 10px;
+                    margin-bottom: 16px;
+                    position: relative;
+                    z-index: 101;
+                }
+                .hamburger span {
+                    display: block;
+                    width: 32px;
+                    height: 4px;
+                    margin: 6px 0;
+                    background: #6c3fcf;
+                    border-radius: 2px;
+                    transition: 0.3s;
+                }
+                .side-menu {
+                    display: none;
+                    position: fixed;
+                    top: 60px;
+                    left: 0;
+                    width: 260px;
+                    height: 90vh;
+                    background: #fff;
+                    box-shadow: 2px 0 16px rgba(44,34,94,0.10);
+                    z-index: 999;
+                    border-radius: 0 16px 16px 0;
+                    padding: 32px 0 32px 0;
+                    animation: slideIn 0.3s;
+                }
+                @keyframes slideIn {
+                    from { left: -260px; opacity: 0; }
+                    to { left: 0; opacity: 1; }
+                }
+                .side-menu ul {
+                    list-style: none;
+                    padding: 0;
+                    margin: 0;
+                    display: flex;
+                    flex-direction: column;
+                    align-items: flex-start;
+                    gap: 18px;
+                    padding-left: 32px;
+                }
+                .side-menu a {
+                    color: #6c3fcf;
+                    font-weight: 600;
+                    text-decoration: none;
+                    padding: 12px 32px 12px 0;
+                    border-radius: 8px;
+                    background: #ede7fa;
+                    transition: background 0.2s;
+                    display: block;
+                    width: 180px;
+                }
+            </style>
+            <div style="position:relative;width:100%;text-align:left;">
+                <div class="hamburger" onclick="var menu=document.getElementById('side-menu');menu.style.display=menu.style.display==='block'?'none':'block';">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+                <nav id="side-menu" class="side-menu" style="width: 250px;padding:18px 0 18px 0;">
+                    <div style="width:100%;display:flex;justify-content:flex-end;padding-right:18px;">
+                        <button onclick="document.getElementById('side-menu').style.display='none';" style="background:none;border:none;font-size:1.5em;color:#6c3fcf;cursor:pointer;">&times;</button>
+                    </div>
+                    <ul>
+                        <li><a href="{% url 'book_vehicle' %}" style="width:120px;padding:8px 16px;">Manage Booking</a></li>
+                        <li><a href="{% url 'booking_history' %}" style="width:120px;padding:8px 16px;">View History</a></li>
+                        <li><a href="{% url 'edit_profile' %}" style="width:120px;padding:8px 16px;">Edit Profile</a></li>
+                        <li><a href="{% url 'add_wallet_balance' %}" style="width:120px;padding:8px 16px;">Add Balance</a></li>
+                        <li><a href="/about/" style="width:120px;padding:8px 16px;">About Us</a></li>
+                        <li><a href="/contact/" style="width:120px;padding:8px 16px;">Contact Us</a></li>
+                    </ul>
+                </nav>
+            </div>
+            <div style="display:flex;gap:12px;margin-bottom:24px;align-items:center;">
+                <button id="tab-ride" style="flex:1;padding:8px;background:#0984e3;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.98em;">Book Ride</button>
+                <button id="tab-rent" style="flex:1;padding:8px;background:#dfe6e9;color:#2d3436;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.98em;">Rent Vehicle</button>
+                <button id="chat-btn" style="padding:8px 18px;background:#6c3fcf;color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:600;font-size:0.98em;margin-left:12px;">Chat</button>
+            </div>
+            <div id="chat-box" style="display:none;position:fixed;bottom:32px;right:32px;width:340px;background:#fff;border-radius:12px;box-shadow:0 2px 16px rgba(44,34,94,0.10);padding:18px 16px;z-index:999;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <span style="font-weight:600;color:#6c3fcf;">Chat (Demo)</span>
+                    <button onclick="document.getElementById('chat-box').style.display='none';" style="background:none;border:none;font-size:1.3em;color:#6c3fcf;cursor:pointer;">&times;</button>
+                </div>
+                <div style="margin-bottom:8px;font-size:0.98em;color:#888;">Messages are not stored (demo only)</div>
+                <input type="text" placeholder="Type a message..." style="width:70%;padding:6px 10px;border-radius:6px;border:1px solid #dfe6e9;">
+                <button style="background:#0984e3;color:#fff;border:none;border-radius:6px;padding:6px 18px;margin-left:8px;">Send</button>
+            </div>
+            <script>
+                document.getElementById('chat-btn').onclick = function() {
+                    var chatBox = document.getElementById('chat-box');
+                    chatBox.style.display = chatBox.style.display === 'block' ? 'none' : 'block';
+                };
+            </script>
+            <div id="ride-section" style="width:100%;max-width:1400px;margin:0 auto;display:flex;flex-direction:column;align-items:center;">
+                <div style="height:48px;"></div>
+                <div class="map-container" id="map" style="height: 400px; width: 96%; margin: 0 auto 32px auto; border-radius:16px; box-shadow:0 4px 16px rgba(44,34,94,0.10);"></div>
+                <div style="width:96%;display:flex;flex-direction:row;gap:32px;justify-content:center;align-items:flex-start;">
+                    <div id="location-div" style="flex:1;min-width:280px;max-width:500px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,34,94,0.08);padding:28px 24px;display:flex;flex-direction:column;gap:18px;">
+                        <form class="route-form" id="location-form" style="display:flex;flex-direction:column;gap:18px;" onsubmit="event.preventDefault(); updateMarker('pickup', document.getElementById('pickup').value); updateMarker('destination', document.getElementById('destination').value);">
+                            {% csrf_token %}
+                            <label for="pickup" style="font-weight:600;color:#6c3fcf;">Pickup Location:</label>
+                            <input type="text" id="pickup" name="pickup" placeholder="Enter pickup location" required value="{{ pickup|default:'' }}" style="padding:10px 18px;border-radius:8px;border:1px solid #dfe6e9;font-size:1em;width:100%;box-sizing:border-box;">
+                            <label for="destination" style="font-weight:600;color:#6c3fcf;">Destination:</label>
+                            <input type="text" id="destination" name="destination" placeholder="Enter destination" required value="{{ destination|default:'' }}" style="padding:10px 18px;border-radius:8px;border:1px solid #dfe6e9;font-size:1em;width:100%;box-sizing:border-box;">
+                            <div style="display:flex;gap:12px;">
+                                <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:12px 0;border:none;border-radius:8px;font-size:1em;flex:1;">Show Route</button>
+                                <button type="button" id="show-vehicles-btn" style="background:#0984e3;color:#fff;font-weight:600;padding:12px 0;border:none;border-radius:8px;font-size:1em;flex:1;">Show Vehicles</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div id="vehicle-div" style="flex:2;width:75%;height:75%;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,34,94,0.08);padding:28px 24px;display:flex;flex-direction:column;gap:18px;">
+                        <div class="vehicle-list" id="vehicle-list" style="display:none;">
+                            <h2 style="margin-bottom:12px;">Available Vehicles</h2>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                            {% if vehicles %}
+                                {% for v in vehicles %}
+                                    <form method="get" action="{% url 'book_vehicle' %}" style="margin:0;padding:0;">
+                                        <input type="hidden" name="pickup" value="{{ pickup }}">
+                                        <input type="hidden" name="destination" value="{{ destination }}">
+                                        <input type="hidden" name="vehicle_type" value="{{ v.type }}">
+                                        <input type="hidden" name="price" value="{{ v.price }}">
+                                        <button type="submit" class="vehicle" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:180px;">
+                                            <img src="https://img.icons8.com/ios-filled/50/0984e3/car--v1.png" alt="{{ v.type }}" style="width:40px;height:40px;margin-bottom:8px;align-self:center;" />
+                                            <span class="vehicle-type" style="font-size:1.1em;margin-bottom:8px;"><strong>Type:</strong> {{ v.type }}</span>
+                                            <span class="vehicle-price" data-type="{{ v.type }}"><strong>Price:</strong> ₹{{ v.price }}</span>
+                                            <input type="hidden" name="price" value="{{ v.price }}" data-type="{{ v.type }}">
+                                            <span style="margin-top:8px;color:#0984e3;font-weight:600;align-self:center;">Book Now</span>
+                                        </button>
+                                    </form>
+                                {% endfor %}
+                            {% else %}
+                                <!-- Demo vehicles if none available -->
+                                <form method="get" action="{% url 'book_vehicle' %}" style="margin:0;padding:0;">
+                                    <input type="hidden" name="pickup" value="{{ pickup }}">
+                                    <input type="hidden" name="destination" value="{{ destination }}">
+                                    <input type="hidden" name="vehicle_type" value="Car">
+                                    <input type="hidden" name="price" value="250">
+                                    <button type="submit" class="vehicle" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:180px;">
+                                        <img src="https://img.icons8.com/ios-filled/50/0984e3/car--v1.png" alt="Car" style="width:40px;height:40px;margin-bottom:8px;align-self:center;" />
+                                        <span class="vehicle-type" style="font-size:1.1em;margin-bottom:8px;"><strong>Type:</strong> Car</span>
+                                        <span class="vehicle-price" data-type="Car"><strong>Price:</strong> ₹250</span>
+                                        <input type="hidden" name="price" value="250" data-type="Car">
+                                        <span style="margin-top:8px;color:#0984e3;font-weight:600;align-self:center;">Book Now</span>
+                                    </button>
+                                </form>
+                                <form method="get" action="{% url 'book_vehicle' %}" style="margin:0;padding:0;">
+                                    <input type="hidden" name="pickup" value="{{ pickup }}">
+                                    <input type="hidden" name="destination" value="{{ destination }}">
+                                    <input type="hidden" name="vehicle_type" value="Bike">
+                                    <input type="hidden" name="price" value="100">
+                                    <button type="submit" class="vehicle" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:180px;">
+                                        <img src="https://img.icons8.com/ios-filled/50/0984e3/motorcycle.png" alt="Bike" style="width:40px;height:40px;margin-bottom:8px;align-self:center;" />
+                                        <span class="vehicle-type" style="font-size:1.1em;margin-bottom:8px;"><strong>Type:</strong> Bike</span>
+                                        <span class="vehicle-price" data-type="Bike"><strong>Price:</strong> ₹100</span>
+                                        <input type="hidden" name="price" value="100" data-type="Bike">
+                                        <span style="margin-top:8px;color:#0984e3;font-weight:600;align-self:center;">Book Now</span>
+                                    </button>
+                                </form>
+                                <form method="get" action="{% url 'book_vehicle' %}" style="margin:0;padding:0;">
+                                    <input type="hidden" name="pickup" value="{{ pickup }}">
+                                    <input type="hidden" name="destination" value="{{ destination }}">
+                                    <input type="hidden" name="vehicle_type" value="SUV">
+                                    <input type="hidden" name="price" value="400">
+                                    <button type="submit" class="vehicle" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:180px;">
+                                        <img src="https://img.icons8.com/ios-filled/50/0984e3/suv.png" alt="SUV" style="width:40px;height:40px;margin-bottom:8px;align-self:center;" />
+                                        <span class="vehicle-type" style="font-size:1.1em;margin-bottom:8px;"><strong>Type:</strong> SUV</span>
+                                        <span class="vehicle-price" data-type="SUV"><strong>Price:</strong> ₹400</span>
+                                        <input type="hidden" name="price" value="400" data-type="SUV">
+                                        <span style="margin-top:8px;color:#0984e3;font-weight:600;align-self:center;">Book Now</span>
+                                    </button>
+                                </form>
+                                <form method="get" action="{% url 'book_vehicle' %}" style="margin:0;padding:0;">
+                                    <input type="hidden" name="pickup" value="{{ pickup }}">
+                                    <input type="hidden" name="destination" value="{{ destination }}">
+                                    <input type="hidden" name="vehicle_type" value="Auto">
+                                    <input type="hidden" name="price" value="150">
+                                    <button type="submit" class="vehicle" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:flex-start;width:100%;min-height:180px;">
+                                        <img src="https://img.icons8.com/ios-filled/50/0984e3/auto-rickshaw.png" alt="Auto" style="width:40px;height:40px;margin-bottom:8px;align-self:center;" />
+                                        <span class="vehicle-type" style="font-size:1.1em;margin-bottom:8px;"><strong>Type:</strong> Auto</span>
+                                        <span class="vehicle-price" data-type="Auto"><strong>Price:</strong> ₹150</span>
+                                        <input type="hidden" name="price" value="150" data-type="Auto">
+                                        <span style="margin-top:8px;color:#0984e3;font-weight:600;align-self:center;">Book Now</span>
+                                    </button>
+                                </form>
+                            {% endif %}
+                            </div>
+                        </div>
+                        <div style="margin-top:24px;background:#fff;border-radius:12px;box-shadow:0 2px 8px rgba(44,34,94,0.08);padding:18px 24px;max-width:500px;">
+                            <form method="post" action="" style="display:flex;flex-direction:row;gap:12px;align-items:center;">
+                                {% csrf_token %}
+                                <input type="hidden" name="pickup" value="{{ pickup }}">
+                                <input type="hidden" name="destination" value="{{ destination }}">
+                                <label for="promocode" style="font-weight:600;color:#0984e3;">Apply Promocode:</label>
+                                <input type="text" id="promocode" name="promocode" placeholder="Enter promocode" style="padding:10px 18px;border-radius:8px;border:1px solid #dfe6e9;font-size:1em;">
+                                <button type="submit" style="background:#0984e3;color:#fff;font-weight:600;padding:10px 18px;border:none;border-radius:8px;font-size:1em;">Apply</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    var mapDiv = document.getElementById('map');
+                    if (!mapDiv) return;
+                    mapDiv.style.display = 'block';
+                    mapDiv.style.height = '500px';
+                    var map = L.map('map', {zoomControl: true}).setView([19.0760, 72.8777], 12);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        maxZoom: 19,
+                        attribution: '© OpenStreetMap'
+                    }).addTo(map);
+                    var pickupInput = document.getElementById('pickup');
+                    var destinationInput = document.getElementById('destination');
+                    var pickupMarker, destinationMarker;
+                    var routeLine;
+                    var pickupCoords = null, destinationCoords = null;
+
+                    function drawRoute() {
+                        if (pickupCoords && destinationCoords) {
+                            var apiKey = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImU5OWIyZmI4YWUxZTRlNTRhYjM1NGIwNmRjNDJmMGJkIiwiaCI6Im11cm11cjY0In0=';
+                            var url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${apiKey}&start=${pickupCoords[1]},${pickupCoords[0]}&end=${destinationCoords[1]},${destinationCoords[0]}`;
+                            fetch(url)
+                                .then(resp => resp.json())
+                                .then(routeData => {
+                                    if (routeLine) map.removeLayer(routeLine);
+                                    if (routeData && routeData.features && routeData.features.length > 0) {
+                                        var coords = routeData.features[0].geometry.coordinates.map(function(c) { return [c[1], c[0]]; });
+                                        routeLine = L.polyline(coords, {color: '#0984e3', weight: 5, opacity: 0.9}).addTo(map);
+                                        map.fitBounds(L.polyline(coords).getBounds());
+                                        // Get distance in km and update fare
+                                        var distanceMeters = routeData.features[0].properties.summary.distance;
+                                        var distanceKm = distanceMeters / 1000.0;
+                                        updateFareByDistance(distanceKm);
+                                    }
+                                });
+                        }
+                    }
+
+                    function updateMarker(type, value) {
+                        if (!value) return;
+                        fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(value))
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.length > 0) {
+                                    var lat = parseFloat(data[0].lat);
+                                    var lon = parseFloat(data[0].lon);
+                                    if (type === 'pickup') {
+                                        if (pickupMarker) map.removeLayer(pickupMarker);
+                                        pickupMarker = L.marker([lat, lon]).addTo(map).bindPopup('Pickup: ' + value).openPopup();
+                                        map.setView([lat, lon], 13);
+                                        pickupCoords = [lat, lon];
+                                    } else if (type === 'destination') {
+                                        if (destinationMarker) map.removeLayer(destinationMarker);
+                                        destinationMarker = L.marker([lat, lon]).addTo(map).bindPopup('Destination: ' + value).openPopup();
+                                        map.setView([lat, lon], 13);
+                                        destinationCoords = [lat, lon];
+                                    }
+                                    drawRoute();
+                                }
+                            });
+                    }
+
+                    if (pickupInput) {
+                        pickupInput.addEventListener('change', function() {
+                            updateMarker('pickup', this.value);
+                        });
+                        pickupInput.addEventListener('blur', function() {
+                            updateMarker('pickup', this.value);
+                        });
+                    }
+                    if (destinationInput) {
+                        destinationInput.addEventListener('change', function() {
+                            updateMarker('destination', this.value);
+                        });
+                        destinationInput.addEventListener('blur', function() {
+                            updateMarker('destination', this.value);
+                        });
+                    }
+
+                    // Initial markers if values exist
+                    var pickup = mapDiv.getAttribute('data-pickup');
+                    var destination = mapDiv.getAttribute('data-destination');
+                    if (pickup && pickup.length > 0) updateMarker('pickup', pickup);
+                    if (destination && destination.length > 0) updateMarker('destination', destination);
+
+                    // Show vehicles button logic
+                    var showVehiclesBtn = document.getElementById('show-vehicles-btn');
+                    if (showVehiclesBtn) {
+                        showVehiclesBtn.onclick = function() {
+                            var vehicleList = document.getElementById('vehicle-list');
+                            if (vehicleList) vehicleList.style.display = 'block';
+                            drawRoute(); // Always draw route when showing vehicles
+                        };
+                    }
+                });
+                </script>
+                <!-- Removed duplicate vehicle details below main vehicle container -->
+            </div>
+            <div id="rent-section" style="display:none;">
+                <h2 style="margin-bottom:12px;">Rent a Vehicle</h2>
+                <div style="display:grid;grid-template-columns:repeat(7, 1fr);gap:16px;overflow-x:auto;">
+                    <!-- Bike -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="Bike">
+                        <input type="hidden" name="rent_price" value="300">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/motorcycle.png" alt="Bike" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">Bike</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹300/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                    <!-- Car -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="Car">
+                        <input type="hidden" name="rent_price" value="1200">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/car--v1.png" alt="Car" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">Car</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹1200/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                    <!-- SUV -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="SUV">
+                        <input type="hidden" name="rent_price" value="2000">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/suv.png" alt="SUV" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">SUV</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹2000/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                    <!-- Sedan -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="Sedan">
+                        <input type="hidden" name="rent_price" value="1500">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/sedan.png" alt="Sedan" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">Sedan</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹1500/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                    <!-- Electric Scooter -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="Electric Scooter">
+                        <input type="hidden" name="rent_price" value="350">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/electric-scooter.png" alt="Electric Scooter" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">Electric Scooter</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹350/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                    <!-- Van -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="Van">
+                        <input type="hidden" name="rent_price" value="1800">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/van.png" alt="Van" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">Van</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹1800/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                    <!-- Luxury Car -->
+                    <form method="post" style="background:#fff;border:1px solid #dfe6e9;box-shadow:0 2px 8px rgba(0,0,0,0.05);border-radius:8px;padding:16px;display:flex;flex-direction:column;align-items:center;">
+                        {% csrf_token %}
+                        <input type="hidden" name="rent_vehicle_type" value="Luxury Car">
+                        <input type="hidden" name="rent_price" value="3500">
+                        <img src="https://img.icons8.com/ios-filled/50/0984e3/luxury-car.png" alt="Luxury Car" style="width:40px;height:40px;margin-bottom:8px;" />
+                        <span class="vehicle-type" style="font-size:1.1em;">Luxury Car</span>
+                        <span class="vehicle-price" style="margin-top:6px;">₹3500/day</span>
+                        <label style="margin-top:12px;font-weight:600;color:#6c3fcf;">Payment Method:</label>
+                        <select name="payment_method" required style="margin-bottom:12px;padding:8px 12px;border-radius:6px;border:1px solid #dfe6e9;">
+                            <option value="wallet">Wallet</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="upi">UPI</option>
+                            <option value="cash">Cash</option>
+                        </select>
+                        <button type="submit" style="background:#6c3fcf;color:#fff;font-weight:600;padding:10px 0;border:none;border-radius:8px;width:100%;margin-top:8px;">Rent Now</button>
+                    </form>
+                </div>
+            </div>
+            <script>
+                document.getElementById('tab-ride').onclick = function() {
+                    document.getElementById('ride-section').style.display = 'block';
+                    document.getElementById('rent-section').style.display = 'none';
+                    this.style.background = '#0984e3';
+                    this.style.color = '#fff';
+                    document.getElementById('tab-rent').style.background = '#dfe6e9';
+                    document.getElementById('tab-rent').style.color = '#2d3436';
+                };
+                document.getElementById('tab-rent').onclick = function() {
+                    document.getElementById('ride-section').style.display = 'none';
+                    document.getElementById('rent-section').style.display = 'block';
+                    this.style.background = '#0984e3';
+                    this.style.color = '#fff';
+                    document.getElementById('tab-ride').style.background = '#dfe6e9';
+                    document.getElementById('tab-ride').style.color = '#2d3436';
+                };
+            </script>
+        {% else %}
+            <div style="min-height: 80vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(120deg, #e3d6fa 0%, #f6f3ff 100%);">
+                <div style="background: #fff; border-radius: 24px; box-shadow: 0 8px 32px rgba(44,34,94,0.12); padding: 56px 48px 48px 48px; text-align: center; max-width: 400px; width: 100%;">
+                    <h1 style="font-size: 3rem; color: #2d1e5f; margin-bottom: 36px; font-weight: 900; letter-spacing: 2px; text-shadow: 0 2px 16px #d1c4e9;">RideOn</h1>
+                    <div style="display: flex; gap: 30px; justify-content: center;">
+                        <a href="{% url 'login' %}" style="color: #fff; text-decoration: none; font-size: 1.18rem; font-weight: 700; padding: 16px 40px; border-radius: 14px; background: linear-gradient(90deg, #6c3fcf 0%, #8f5de7 100%); box-shadow: 0 4px 16px rgba(44,34,94,0.10); border: none; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; outline: none; border: none; display: inline-block;">Login</a>
+                        <a href="{% url 'register' %}" style="color: #fff; text-decoration: none; font-size: 1.18rem; font-weight: 700; padding: 16px 40px; border-radius: 14px; background: linear-gradient(90deg, #6c3fcf 0%, #8f5de7 100%); box-shadow: 0 4px 16px rgba(44,34,94,0.10); border: none; transition: transform 0.2s, box-shadow 0.2s; cursor: pointer; outline: none; border: none; display: inline-block;">Register</a>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    <script>
+    // Update fare and filter vehicles by distance
+    function updateFareByDistance(distanceKm) {
+        // Vehicle visibility logic
+        var vehicleCards = {
+            Car: document.querySelector('.vehicle-price[data-type="Car"]').closest('form'),
+            Bike: document.querySelector('.vehicle-price[data-type="Bike"]').closest('form'),
+            SUV: document.querySelector('.vehicle-price[data-type="SUV"]').closest('form'),
+            Auto: document.querySelector('.vehicle-price[data-type="Auto"]').closest('form')
+        };
+        // Show/hide vehicles based on distance
+        if (distanceKm < 10) {
+            vehicleCards.Car.style.display = '';
+            vehicleCards.Bike.style.display = '';
+            vehicleCards.SUV.style.display = '';
+            vehicleCards.Auto.style.display = '';
+        } else if (distanceKm < 25) {
+            vehicleCards.Car.style.display = '';
+            vehicleCards.Bike.style.display = 'none';
+            vehicleCards.SUV.style.display = '';
+            vehicleCards.Auto.style.display = '';
+        } else if (distanceKm < 50) {
+            vehicleCards.Car.style.display = '';
+            vehicleCards.Bike.style.display = 'none';
+            vehicleCards.SUV.style.display = '';
+            vehicleCards.Auto.style.display = 'none';
+        } else {
+            vehicleCards.Car.style.display = '';
+            vehicleCards.Bike.style.display = 'none';
+            vehicleCards.SUV.style.display = '';
+            vehicleCards.Auto.style.display = 'none';
+        }
+
+        // Fare calculation logic
+        // Bike: up to 2km = 22rs, then 3rs/km
+        // Auto: base 35rs, 7rs/km
+        // Car: base 70rs, 10rs/km
+        // SUV: base 120rs, 25rs/km
+        var fares = {
+            Bike: function(d) { return d <= 2 ? 22 : 22 + Math.round((d-2)*3); },
+            Auto: function(d) { return 35 + Math.round(d*7); },
+            Car: function(d) { return 70 + Math.round(d*10); },
+            SUV: function(d) { return 120 + Math.round(d*25); }
+        };
+        Object.keys(fares).forEach(function(type) {
+            var price = fares[type](distanceKm);
+            var priceSpan = document.querySelector('.vehicle-price[data-type="' + type + '"]');
+            if (priceSpan) priceSpan.innerHTML = '<strong>Price:</strong> ₹' + price;
+            var priceInput = document.querySelector('input[name="price"][data-type="' + type + '"]');
+            if (priceInput) priceInput.value = price;
+        });
+    }
+    </script>
+</body>
+</html>
